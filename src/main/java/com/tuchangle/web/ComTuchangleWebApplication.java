@@ -6,7 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class ComTuchangleWebApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(ComTuchangleWebApplication.class, args);
-	}
+  public static void main(String[] args) {
+    SpringApplication.run(ComTuchangleWebApplication.class, args);
+  }
+
 }
