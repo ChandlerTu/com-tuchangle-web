@@ -3,6 +3,7 @@
 /target/
 !.mvn/wrapper/maven-wrapper.jar
 package-lock.json
+src/main/resources/static/built/bundle.js
 
 ### STS ###
 .apt_generated
