@@ -25,6 +25,12 @@ public class DatabaseLoader implements CommandLineRunner {
     dietary2.setGram(200);
     dietary2.setInsertTime(new Date());
     this.repository.save(dietary2);
+    
+    Dietary dietary3 = new Dietary();
+    dietary3.setFood("葡萄");
+    dietary3.setGram(300);
+    dietary3.setInsertTime(new Date());
+    this.repository.save(dietary3);
   }
 
 }
