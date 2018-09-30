@@ -27,4 +27,3 @@ src/main/resources/static/built/bundle.js
 /dist/
 /nbdist/
 /.nb-gradle/
-src/main/resources/static/built/bundle.js
