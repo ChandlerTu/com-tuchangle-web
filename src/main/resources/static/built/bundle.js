@@ -57,185 +57,40 @@
 	var React = __webpack_require__(1);
 	var ReactDOM = __webpack_require__(37);
 	var when = __webpack_require__(184);
-	var client = __webpack_require__(204);
 	
-	var follow = __webpack_require__(232); // function to hop multiple links by "rel"
+	var client = __webpack_require__(204);
+	var follow = __webpack_require__(232);
 	
 	var root = '/api';
 	
-	// tag::app[]
-	
-	var App = function (_React$Component) {
-	    _inherits(App, _React$Component);
-	
-	    function App(props) {
-	        _classCallCheck(this, App);
-	
-	        var _this = _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this, props));
-	
-	        _this.state = { dietaries: [], attributes: [], page: 1, pageSize: 20, links: {} };
-	        _this.onCreate = _this.onCreate.bind(_this);
-	        _this.onUpdate = _this.onUpdate.bind(_this);
-	        _this.onDelete = _this.onDelete.bind(_this);
-	        return _this;
-	    }
-	
-	    // tag::follow-2[]
-	
-	
-	    _createClass(App, [{
-	        key: 'loadFromServer',
-	        value: function loadFromServer(pageSize) {
-	            var _this2 = this;
-	
-	            follow(client, root, [{ rel: 'dietaries', params: { size: pageSize } }]).then(function (dietaryCollection) {
-	                return client({
-	                    method: 'GET',
-	                    path: dietaryCollection.entity._links.profile.href,
-	                    headers: { 'Accept': 'application/schema+json' }
-	                }).then(function (schema) {
-	                    _this2.schema = schema.entity;
-	                    _this2.links = dietaryCollection.entity._links;
-	                    return dietaryCollection;
-	                });
-	            }).then(function (dietaryCollection) {
-	                _this2.page = dietaryCollection.entity.page;
-	                return dietaryCollection.entity._embedded.dietaries.map(function (dietary) {
-	                    return client({
-	                        method: 'GET',
-	                        path: dietary._links.self.href
-	                    });
-	                });
-	            }).then(function (dietaryPromises) {
-	                return when.all(dietaryPromises);
-	            }).done(function (dietaries) {
-	                _this2.setState({
-	                    page: _this2.page,
-	                    dietaries: dietaries,
-	                    attributes: Object.keys(_this2.schema.properties),
-	                    pageSize: pageSize,
-	                    links: _this2.links
-	                });
-	            });
-	        }
-	        // end::follow-2[]
-	
-	        // tag::create[]
-	
-	    }, {
-	        key: 'onCreate',
-	        value: function onCreate(newDietary) {
-	            var _this3 = this;
-	
-	            follow(client, root, ['dietaries']).then(function (dietaryCollection) {
-	                return client({
-	                    method: 'POST',
-	                    path: dietaryCollection.entity._links.self.href,
-	                    entity: newDietary,
-	                    headers: { 'Content-Type': 'application/json' }
-	                });
-	            }).then(function (response) {
-	                return follow(client, root, [{ rel: 'dietaries', params: { 'size': _this3.state.pageSize } }]);
-	            }).done(function (response) {
-	                _this3.loadFromServer(_this3.state.pageSize);
-	            });
-	        }
-	        // end::create[]
-	
-	    }, {
-	        key: 'onUpdate',
-	        value: function onUpdate(dietary, updatedDietary) {
-	            var _this4 = this;
-	
-	            client({
-	                method: 'PUT',
-	                path: dietary.entity._links.self.href,
-	                entity: updatedDietary,
-	                headers: {
-	                    'Content-Type': 'application/json'
-	                }
-	            }).done(function (response) {
-	                _this4.loadFromServer(_this4.state.pageSize);
-	            }, function (response) {
-	                if (response.status.code === 412) {
-	                    alert('DENIED: Unable to update ' + dietary.entity._links.self.href + '. Your copy is stale.');
-	                }
-	            });
-	        }
-	
-	        // tag::delete[]
-	
-	    }, {
-	        key: 'onDelete',
-	        value: function onDelete(dietary) {
-	            var _this5 = this;
-	
-	            client({ method: 'DELETE', path: dietary.entity._links.self.href }).done(function (response) {
-	                _this5.loadFromServer(_this5.state.pageSize);
-	            });
-	        }
-	        // end::delete[]
-	
-	    }, {
-	        key: 'componentDidMount',
-	        value: function componentDidMount() {
-	            this.loadFromServer(this.state.pageSize);
-	        }
-	    }, {
-	        key: 'render',
-	        value: function render() {
-	            return React.createElement(
-	                'div',
-	                null,
-	                React.createElement(CreateDialog, { attributes: this.state.attributes, onCreate: this.onCreate }),
-	                React.createElement(DietaryList, { page: this.state.page,
-	                    dietaries: this.state.dietaries,
-	                    links: this.state.links,
-	                    pageSize: this.state.pageSize,
-	                    attributes: this.state.attributes,
-	                    onNavigate: this.onNavigate,
-	                    onUpdate: this.onUpdate,
-	                    onDelete: this.onDelete,
-	                    updatePageSize: this.updatePageSize })
-	            );
-	        }
-	    }]);
-	
-	    return App;
-	}(React.Component);
-	// end::app[]
-	
-	
-	// tag::create-dialog[]
-	
-	
-	var CreateDialog = function (_React$Component2) {
-	    _inherits(CreateDialog, _React$Component2);
+	var CreateDialog = function (_React$Component) {
+	    _inherits(CreateDialog, _React$Component);
 	
 	    function CreateDialog(props) {
 	        _classCallCheck(this, CreateDialog);
 	
-	        var _this6 = _possibleConstructorReturn(this, (CreateDialog.__proto__ || Object.getPrototypeOf(CreateDialog)).call(this, props));
+	        var _this = _possibleConstructorReturn(this, (CreateDialog.__proto__ || Object.getPrototypeOf(CreateDialog)).call(this, props));
 	
-	        _this6.handleSubmit = _this6.handleSubmit.bind(_this6);
-	        return _this6;
+	        _this.handleSubmit = _this.handleSubmit.bind(_this);
+	        return _this;
 	    }
 	
 	    _createClass(CreateDialog, [{
 	        key: 'handleSubmit',
 	        value: function handleSubmit(e) {
-	            var _this7 = this;
+	            var _this2 = this;
 	
 	            e.preventDefault();
+	
 	            var newDietary = {};
 	            this.props.attributes.forEach(function (attribute) {
-	                newDietary[attribute] = ReactDOM.findDOMNode(_this7.refs[attribute]).value.trim();
+	                newDietary[attribute] = ReactDOM.findDOMNode(_this2.refs[attribute]).value.trim();
 	            });
 	            this.props.onCreate(newDietary);
 	
 	            // clear out the dialog's inputs
 	            this.props.attributes.forEach(function (attribute) {
-	                ReactDOM.findDOMNode(_this7.refs[attribute]).value = '';
+	                ReactDOM.findDOMNode(_this2.refs[attribute]).value = '';
 	            });
 	
 	            // Navigate away from the dialog to hide it.
@@ -294,45 +149,45 @@
 	
 	    return CreateDialog;
 	}(React.Component);
-	// end::create-dialog[]
 	
-	
-	var UpdateDialog = function (_React$Component3) {
-	    _inherits(UpdateDialog, _React$Component3);
+	var UpdateDialog = function (_React$Component2) {
+	    _inherits(UpdateDialog, _React$Component2);
 	
 	    function UpdateDialog(props) {
 	        _classCallCheck(this, UpdateDialog);
 	
-	        var _this8 = _possibleConstructorReturn(this, (UpdateDialog.__proto__ || Object.getPrototypeOf(UpdateDialog)).call(this, props));
+	        var _this3 = _possibleConstructorReturn(this, (UpdateDialog.__proto__ || Object.getPrototypeOf(UpdateDialog)).call(this, props));
 	
-	        _this8.handleSubmit = _this8.handleSubmit.bind(_this8);
-	        return _this8;
+	        _this3.handleSubmit = _this3.handleSubmit.bind(_this3);
+	        return _this3;
 	    }
 	
 	    _createClass(UpdateDialog, [{
 	        key: 'handleSubmit',
 	        value: function handleSubmit(e) {
-	            var _this9 = this;
+	            var _this4 = this;
 	
 	            e.preventDefault();
+	
 	            var updatedDietary = {};
 	            this.props.attributes.forEach(function (attribute) {
-	                updatedDietary[attribute] = ReactDOM.findDOMNode(_this9.refs[attribute]).value.trim();
+	                updatedDietary[attribute] = ReactDOM.findDOMNode(_this4.refs[attribute]).value.trim();
 	            });
 	            this.props.onUpdate(this.props.dietary, updatedDietary);
+	
 	            window.location = "#";
 	        }
 	    }, {
 	        key: 'render',
 	        value: function render() {
-	            var _this10 = this;
+	            var _this5 = this;
 	
 	            var inputs = this.props.attributes.map(function (attribute) {
 	                return React.createElement(
 	                    'p',
-	                    { key: _this10.props.dietary.entity[attribute] },
+	                    { key: _this5.props.dietary.entity[attribute] },
 	                    React.createElement('input', { type: 'text', placeholder: attribute,
-	                        defaultValue: _this10.props.dietary.entity[attribute],
+	                        defaultValue: _this5.props.dietary.entity[attribute],
 	                        ref: attribute, className: 'field' })
 	                );
 	            });
@@ -382,83 +237,16 @@
 	    return UpdateDialog;
 	}(React.Component);
 	
-	// tag::employee-list[]
-	
-	
-	var DietaryList = function (_React$Component4) {
-	    _inherits(DietaryList, _React$Component4);
-	
-	    function DietaryList() {
-	        _classCallCheck(this, DietaryList);
-	
-	        return _possibleConstructorReturn(this, (DietaryList.__proto__ || Object.getPrototypeOf(DietaryList)).apply(this, arguments));
-	    }
-	
-	    _createClass(DietaryList, [{
-	        key: 'render',
-	        value: function render() {
-	            var _this12 = this;
-	
-	            var dietaries = this.props.dietaries.map(function (dietary) {
-	                return React.createElement(Dietary, { key: dietary.entity._links.self.href,
-	                    dietary: dietary,
-	                    attributes: _this12.props.attributes,
-	                    onUpdate: _this12.props.onUpdate,
-	                    onDelete: _this12.props.onDelete });
-	            });
-	            return React.createElement(
-	                'table',
-	                null,
-	                React.createElement(
-	                    'tbody',
-	                    null,
-	                    React.createElement(
-	                        'tr',
-	                        null,
-	                        React.createElement(
-	                            'th',
-	                            null,
-	                            'Food'
-	                        ),
-	                        React.createElement(
-	                            'th',
-	                            null,
-	                            'Gram'
-	                        ),
-	                        React.createElement(
-	                            'th',
-	                            null,
-	                            'Update'
-	                        ),
-	                        React.createElement(
-	                            'th',
-	                            null,
-	                            'Delete'
-	                        )
-	                    ),
-	                    dietaries
-	                )
-	            );
-	        }
-	    }]);
-	
-	    return DietaryList;
-	}(React.Component);
-	// end::employee-list[]
-	
-	// tag::dietary[]
-	
-	
-	var Dietary = function (_React$Component5) {
-	    _inherits(Dietary, _React$Component5);
+	var Dietary = function (_React$Component3) {
+	    _inherits(Dietary, _React$Component3);
 	
 	    function Dietary(props) {
 	        _classCallCheck(this, Dietary);
 	
-	        var _this13 = _possibleConstructorReturn(this, (Dietary.__proto__ || Object.getPrototypeOf(Dietary)).call(this, props));
+	        var _this6 = _possibleConstructorReturn(this, (Dietary.__proto__ || Object.getPrototypeOf(Dietary)).call(this, props));
 	
-	        _this13.handleDelete = _this13.handleDelete.bind(_this13);
-	        return _this13;
+	        _this6.handleDelete = _this6.handleDelete.bind(_this6);
+	        return _this6;
 	    }
 	
 	    _createClass(Dietary, [{
@@ -504,13 +292,190 @@
 	
 	    return Dietary;
 	}(React.Component);
-	// end::dietary[]
 	
-	// tag::render[]
+	var DietaryList = function (_React$Component4) {
+	    _inherits(DietaryList, _React$Component4);
 	
+	    function DietaryList() {
+	        _classCallCheck(this, DietaryList);
+	
+	        return _possibleConstructorReturn(this, (DietaryList.__proto__ || Object.getPrototypeOf(DietaryList)).apply(this, arguments));
+	    }
+	
+	    _createClass(DietaryList, [{
+	        key: 'render',
+	        value: function render() {
+	            var _this8 = this;
+	
+	            var dietaries = this.props.dietaries.map(function (dietary) {
+	                return React.createElement(Dietary, { key: dietary.entity._links.self.href,
+	                    dietary: dietary,
+	                    attributes: _this8.props.attributes,
+	                    onUpdate: _this8.props.onUpdate,
+	                    onDelete: _this8.props.onDelete });
+	            });
+	
+	            return React.createElement(
+	                'table',
+	                null,
+	                React.createElement(
+	                    'tbody',
+	                    null,
+	                    React.createElement(
+	                        'tr',
+	                        null,
+	                        React.createElement(
+	                            'th',
+	                            null,
+	                            'Food'
+	                        ),
+	                        React.createElement(
+	                            'th',
+	                            null,
+	                            'Gram'
+	                        ),
+	                        React.createElement(
+	                            'th',
+	                            null,
+	                            'Update'
+	                        ),
+	                        React.createElement(
+	                            'th',
+	                            null,
+	                            'Delete'
+	                        )
+	                    ),
+	                    dietaries
+	                )
+	            );
+	        }
+	    }]);
+	
+	    return DietaryList;
+	}(React.Component);
+	
+	var App = function (_React$Component5) {
+	    _inherits(App, _React$Component5);
+	
+	    function App(props) {
+	        _classCallCheck(this, App);
+	
+	        var _this9 = _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this, props));
+	
+	        _this9.state = { dietaries: [], attributes: [], page: 1, pageSize: 20, links: {} };
+	        _this9.onCreate = _this9.onCreate.bind(_this9);
+	        _this9.onUpdate = _this9.onUpdate.bind(_this9);
+	        _this9.onDelete = _this9.onDelete.bind(_this9);
+	        return _this9;
+	    }
+	
+	    _createClass(App, [{
+	        key: 'componentDidMount',
+	        value: function componentDidMount() {
+	            this.loadFromServer(this.state.pageSize);
+	        }
+	    }, {
+	        key: 'loadFromServer',
+	        value: function loadFromServer(pageSize) {
+	            var _this10 = this;
+	
+	            follow(client, root, [{ rel: 'dietaries', params: { size: pageSize } }]).then(function (dietaryCollection) {
+	                return client({
+	                    method: 'GET',
+	                    path: dietaryCollection.entity._links.profile.href,
+	                    headers: { 'Accept': 'application/schema+json' }
+	                }).then(function (schema) {
+	                    _this10.schema = schema.entity;
+	                    _this10.links = dietaryCollection.entity._links;
+	                    return dietaryCollection;
+	                });
+	            }).then(function (dietaryCollection) {
+	                _this10.page = dietaryCollection.entity.page;
+	                return dietaryCollection.entity._embedded.dietaries.map(function (dietary) {
+	                    return client({
+	                        method: 'GET',
+	                        path: dietary._links.self.href
+	                    });
+	                });
+	            }).then(function (dietaryPromises) {
+	                return when.all(dietaryPromises);
+	            }).done(function (dietaries) {
+	                _this10.setState({
+	                    page: _this10.page,
+	                    dietaries: dietaries,
+	                    attributes: Object.keys(_this10.schema.properties),
+	                    pageSize: pageSize,
+	                    links: _this10.links
+	                });
+	            });
+	        }
+	    }, {
+	        key: 'onCreate',
+	        value: function onCreate(newDietary) {
+	            var _this11 = this;
+	
+	            follow(client, root, ['dietaries']).then(function (dietaryCollection) {
+	                return client({
+	                    method: 'POST',
+	                    path: dietaryCollection.entity._links.self.href,
+	                    entity: newDietary,
+	                    headers: { 'Content-Type': 'application/json' }
+	                });
+	            }).then(function (response) {
+	                return follow(client, root, [{ rel: 'dietaries', params: { 'size': _this11.state.pageSize } }]);
+	            }).done(function (response) {
+	                _this11.loadFromServer(_this11.state.pageSize);
+	            });
+	        }
+	    }, {
+	        key: 'onUpdate',
+	        value: function onUpdate(dietary, updatedDietary) {
+	            var _this12 = this;
+	
+	            client({
+	                method: 'PUT',
+	                path: dietary.entity._links.self.href,
+	                entity: updatedDietary,
+	                headers: {
+	                    'Content-Type': 'application/json'
+	                }
+	            }).done(function (response) {
+	                _this12.loadFromServer(_this12.state.pageSize);
+	            });
+	        }
+	    }, {
+	        key: 'onDelete',
+	        value: function onDelete(dietary) {
+	            var _this13 = this;
+	
+	            client({ method: 'DELETE', path: dietary.entity._links.self.href }).done(function (response) {
+	                _this13.loadFromServer(_this13.state.pageSize);
+	            });
+	        }
+	    }, {
+	        key: 'render',
+	        value: function render() {
+	            return React.createElement(
+	                'div',
+	                null,
+	                React.createElement(CreateDialog, { attributes: this.state.attributes, onCreate: this.onCreate }),
+	                React.createElement(DietaryList, { page: this.state.page,
+	                    dietaries: this.state.dietaries,
+	                    links: this.state.links,
+	                    pageSize: this.state.pageSize,
+	                    attributes: this.state.attributes,
+	                    onNavigate: this.onNavigate,
+	                    onUpdate: this.onUpdate,
+	                    onDelete: this.onDelete,
+	                    updatePageSize: this.updatePageSize })
+	            );
+	        }
+	    }]);
+	
+	    return App;
+	}(React.Component);
 	
 	ReactDOM.render(React.createElement(App, null), document.getElementById('react'));
-	// end::render[]
 
 /***/ }),
 /* 1 */
