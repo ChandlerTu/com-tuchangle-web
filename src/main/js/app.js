@@ -2,6 +2,7 @@
 
 const React = require( 'react' );
 const ReactDOM = require( 'react-dom' )
+const when = require( 'when' );
 const client = require( './client' );
 
 const follow = require( './follow' ); // function to hop multiple links by "rel"
@@ -13,8 +14,9 @@ class App extends React.Component {
 
     constructor( props ) {
         super( props );
-        this.state = { dietaries: [], attributes: [], pageSize: 20, links: {} };
+        this.state = { dietaries: [], attributes: [], page: 1, pageSize: 20, links: {} };
         this.onCreate = this.onCreate.bind( this );
+        this.onUpdate = this.onUpdate.bind( this );
         this.onDelete = this.onDelete.bind( this );
     }
 
@@ -29,14 +31,26 @@ class App extends React.Component {
                 headers: { 'Accept': 'application/schema+json' }
             } ).then( schema => {
                 this.schema = schema.entity;
+                this.links = dietaryCollection.entity._links;
                 return dietaryCollection;
             } );
-        } ).done( dietaryCollection => {
+        } ).then( dietaryCollection => {
+            this.page = dietaryCollection.entity.page;
+            return dietaryCollection.entity._embedded.dietaries.map( dietary =>
+                client( {
+                    method: 'GET',
+                    path: dietary._links.self.href
+                } )
+            );
+        } ).then( dietaryPromises => {
+            return when.all( dietaryPromises );
+        } ).done( dietaries => {
             this.setState( {
-                dietaries: dietaryCollection.entity._embedded.dietaries,
+                page: this.page,
+                dietaries: dietaries,
                 attributes: Object.keys( this.schema.properties ),
                 pageSize: pageSize,
-                links: dietaryCollection.entity._links
+                links: this.links
             } );
         } );
     }
@@ -60,9 +74,26 @@ class App extends React.Component {
     }
     // end::create[]
 
+    onUpdate( dietary, updatedDietary ) {
+        client( {
+            method: 'PUT',
+            path: dietary.entity._links.self.href,
+            entity: updatedDietary,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        } ).done( response => {
+            this.loadFromServer(this.state.pageSize);
+        }, response => {
+            if ( response.status.code === 412 ) {
+                alert( 'DENIED: Unable to update ' + dietary.entity._links.self.href + '. Your copy is stale.' );
+            }
+        } );
+    }
+
     // tag::delete[]
     onDelete( dietary ) {
-        client( { method: 'DELETE', path: dietary._links.self.href } ).done( response => {
+        client( { method: 'DELETE', path: dietary.entity._links.self.href } ).done( response => {
             this.loadFromServer( this.state.pageSize );
         } );
     }
@@ -76,8 +107,15 @@ class App extends React.Component {
         return (
             <div>
                 <CreateDialog attributes={this.state.attributes} onCreate={this.onCreate} />
-                <DietaryList onDelete={this.onDelete} dietaries={this.state.dietaries}
-                    links={this.state.links} pageSize={this.state.pageSize} />
+                <DietaryList page={this.state.page}
+                    dietaries={this.state.dietaries}
+                    links={this.state.links}
+                    pageSize={this.state.pageSize}
+                    attributes={this.state.attributes}
+                    onNavigate={this.onNavigate}
+                    onUpdate={this.onUpdate}
+                    onDelete={this.onDelete}
+                    updatePageSize={this.updatePageSize} />
             </div>
         )
     }
@@ -140,11 +178,66 @@ class CreateDialog extends React.Component {
 }
 // end::create-dialog[]
 
+
+class UpdateDialog extends React.Component {
+
+    constructor( props ) {
+        super( props );
+        this.handleSubmit = this.handleSubmit.bind( this );
+    }
+
+    handleSubmit( e ) {
+        e.preventDefault();
+        var updatedDietary = {};
+        this.props.attributes.forEach( attribute => {
+            updatedDietary[attribute] = ReactDOM.findDOMNode( this.refs[attribute] ).value.trim();
+        } );
+        this.props.onUpdate( this.props.dietary, updatedDietary );
+        window.location = "#";
+    }
+
+    render() {
+        var inputs = this.props.attributes.map( attribute =>
+            <p key={this.props.dietary.entity[attribute]}>
+                <input type="text" placeholder={attribute}
+                    defaultValue={this.props.dietary.entity[attribute]}
+                    ref={attribute} className="field" />
+            </p>
+        );
+
+        var dialogId = "updateDietary-" + this.props.dietary.entity._links.self.href;
+
+        return (
+            <div>
+                <a href={"#" + dialogId}>Update</a>
+
+                <div id={dialogId} className="modalDialog">
+                    <div>
+                        <a href="#" title="Close" className="close">X</a>
+
+                        <h2>Update an dietary</h2>
+
+                        <form>
+                            {inputs}
+                            <button onClick={this.handleSubmit}>Update</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+}
+
 // tag::employee-list[]
 class DietaryList extends React.Component {
     render() {
         var dietaries = this.props.dietaries.map( dietary =>
-            <Dietary key={dietary._links.self.href} dietary={dietary} onDelete={this.props.onDelete} />
+            <Dietary key={dietary.entity._links.self.href}
+                dietary={dietary}
+                attributes={this.props.attributes}
+                onUpdate={this.props.onUpdate}
+                onDelete={this.props.onDelete} />
         );
         return (
             <table>
@@ -152,6 +245,7 @@ class DietaryList extends React.Component {
                     <tr>
                         <th>Food</th>
                         <th>Gram</th>
+                        <th>Update</th>
                         <th>Delete</th>
                     </tr>
                     {dietaries}
@@ -177,8 +271,13 @@ class Dietary extends React.Component {
     render() {
         return (
             <tr>
-                <td>{this.props.dietary.food}</td>
-                <td>{this.props.dietary.gram}</td>
+                <td>{this.props.dietary.entity.food}</td>
+                <td>{this.props.dietary.entity.gram}</td>
+                <td>
+                    <UpdateDialog dietary={this.props.dietary}
+                        attributes={this.props.attributes}
+                        onUpdate={this.props.onUpdate} />
+                </td>
                 <td>
                     <button onClick={this.handleDelete}>Delete</button>
                 </td>
