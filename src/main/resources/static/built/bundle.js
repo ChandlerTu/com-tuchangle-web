@@ -24841,16 +24841,16 @@
 	'use strict';
 	
 	var rest = __webpack_require__(205);
-	var defaultRequest = __webpack_require__(213);
-	var mime = __webpack_require__(215);
+	var mime = __webpack_require__(213);
+	
+	var baseRegistry = __webpack_require__(216);
+	var registry = baseRegistry.child();
+	registry.register('text/uri-list', __webpack_require__(228));
+	registry.register('application/hal+json', __webpack_require__(217));
+	
 	var uriTemplateInterceptor = __webpack_require__(229);
 	var errorCode = __webpack_require__(230);
-	var baseRegistry = __webpack_require__(217);
-	
-	var registry = baseRegistry.child();
-	
-	registry.register('text/uri-list', __webpack_require__(231));
-	registry.register('application/hal+json', __webpack_require__(218));
+	var defaultRequest = __webpack_require__(231);
 	
 	module.exports = rest.wrap(mime, { registry: registry }).wrap(uriTemplateInterceptor).wrap(errorCode).wrap(defaultRequest, { headers: { 'Accept': 'application/hal+json' } });
 
@@ -25749,7 +25749,7 @@
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
-	 * Copyright 2013 the original author or authors
+	 * Copyright 2012-2014 the original author or authors
 	 * @license MIT, see LICENSE.txt for details
 	 *
 	 * @author Scott Andrews
@@ -25760,64 +25760,95 @@
 	
 		!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
 	
-			var interceptor, mixinUtil, defaulter;
+			var interceptor, mime, registry, noopConverter, when;
 	
 			interceptor = __webpack_require__(214);
-			mixinUtil = __webpack_require__(210);
+			mime = __webpack_require__(215);
+			registry = __webpack_require__(216);
+			when = __webpack_require__(184);
 	
-			defaulter = (function () {
-	
-				function mixin(prop, target, defaults) {
-					if (prop in target || prop in defaults) {
-						target[prop] = mixinUtil({}, defaults[prop], target[prop]);
-					}
-				}
-	
-				function copy(prop, target, defaults) {
-					if (prop in defaults && !(prop in target)) {
-						target[prop] = defaults[prop];
-					}
-				}
-	
-				var mappings = {
-					method: copy,
-					path: copy,
-					params: mixin,
-					headers: mixin,
-					entity: copy,
-					mixin: mixin
-				};
-	
-				return function (target, defaults) {
-					for (var prop in mappings) {
-						/*jshint forin: false */
-						mappings[prop](prop, target, defaults);
-					}
-					return target;
-				};
-	
-			}());
+			noopConverter = {
+				read: function (obj) { return obj; },
+				write: function (obj) { return obj; }
+			};
 	
 			/**
-			 * Provide default values for a request. These values will be applied to the
-			 * request if the request object does not already contain an explicit value.
+			 * MIME type support for request and response entities.  Entities are
+			 * (de)serialized using the converter for the MIME type.
 			 *
-			 * For 'params', 'headers', and 'mixin', individual values are mixed in with the
-			 * request's values. The result is a new object representiing the combined
-			 * request and config values. Neither input object is mutated.
+			 * Request entities are converted using the desired converter and the
+			 * 'Accept' request header prefers this MIME.
+			 *
+			 * Response entities are converted based on the Content-Type response header.
 			 *
 			 * @param {Client} [client] client to wrap
-			 * @param {string} [config.method] the default method
-			 * @param {string} [config.path] the default path
-			 * @param {Object} [config.params] the default params, mixed with the request's existing params
-			 * @param {Object} [config.headers] the default headers, mixed with the request's existing headers
-			 * @param {Object} [config.mixin] the default "mixins" (http/https options), mixed with the request's existing "mixins"
+			 * @param {string} [config.mime='text/plain'] MIME type to encode the request
+			 *   entity
+			 * @param {string} [config.accept] Accept header for the request
+			 * @param {Client} [config.client=<request.originator>] client passed to the
+			 *   converter, defaults to the client originating the request
+			 * @param {Registry} [config.registry] MIME registry, defaults to the root
+			 *   registry
+			 * @param {boolean} [config.permissive] Allow an unkown request MIME type
 			 *
 			 * @returns {Client}
 			 */
 			return interceptor({
-				request: function handleRequest(request, config) {
-					return defaulter(request, config);
+				init: function (config) {
+					config.registry = config.registry || registry;
+					return config;
+				},
+				request: function (request, config) {
+					var type, headers;
+	
+					headers = request.headers || (request.headers = {});
+					type = mime.parse(headers['Content-Type'] = headers['Content-Type'] || config.mime || 'text/plain');
+					headers.Accept = headers.Accept || config.accept || type.raw + ', application/json;q=0.8, text/plain;q=0.5, */*;q=0.2';
+	
+					if (!('entity' in request)) {
+						return request;
+					}
+	
+					return config.registry.lookup(type).otherwise(function () {
+						// failed to resolve converter
+						if (config.permissive) {
+							return noopConverter;
+						}
+						throw 'mime-unknown';
+					}).then(function (converter) {
+						var client = config.client || request.originator;
+	
+						return when.attempt(converter.write, request.entity, { client: client, request: request, mime: type, registry: config.registry })
+							.otherwise(function() {
+								throw 'mime-serialization';
+							})
+							.then(function(entity) {
+								request.entity = entity;
+								return request;
+							});
+					});
+				},
+				response: function (response, config) {
+					if (!(response.headers && response.headers['Content-Type'] && response.entity)) {
+						return response;
+					}
+	
+					var type = mime.parse(response.headers['Content-Type']);
+	
+					return config.registry.lookup(type).otherwise(function () { return noopConverter; }).then(function (converter) {
+						var client = config.client || response.request && response.request.originator;
+	
+						return when.attempt(converter.read, response.entity, { client: client, response: response, mime: type, registry: config.registry })
+							.otherwise(function (e) {
+								response.error = 'mime-deserialization';
+								response.cause = e;
+								throw response;
+							})
+							.then(function (entity) {
+								response.entity = entity;
+								return response;
+							});
+					});
 				}
 			});
 	
@@ -26005,122 +26036,6 @@
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
-	 * Copyright 2012-2014 the original author or authors
-	 * @license MIT, see LICENSE.txt for details
-	 *
-	 * @author Scott Andrews
-	 */
-	
-	(function (define) {
-		'use strict';
-	
-		!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
-	
-			var interceptor, mime, registry, noopConverter, when;
-	
-			interceptor = __webpack_require__(214);
-			mime = __webpack_require__(216);
-			registry = __webpack_require__(217);
-			when = __webpack_require__(184);
-	
-			noopConverter = {
-				read: function (obj) { return obj; },
-				write: function (obj) { return obj; }
-			};
-	
-			/**
-			 * MIME type support for request and response entities.  Entities are
-			 * (de)serialized using the converter for the MIME type.
-			 *
-			 * Request entities are converted using the desired converter and the
-			 * 'Accept' request header prefers this MIME.
-			 *
-			 * Response entities are converted based on the Content-Type response header.
-			 *
-			 * @param {Client} [client] client to wrap
-			 * @param {string} [config.mime='text/plain'] MIME type to encode the request
-			 *   entity
-			 * @param {string} [config.accept] Accept header for the request
-			 * @param {Client} [config.client=<request.originator>] client passed to the
-			 *   converter, defaults to the client originating the request
-			 * @param {Registry} [config.registry] MIME registry, defaults to the root
-			 *   registry
-			 * @param {boolean} [config.permissive] Allow an unkown request MIME type
-			 *
-			 * @returns {Client}
-			 */
-			return interceptor({
-				init: function (config) {
-					config.registry = config.registry || registry;
-					return config;
-				},
-				request: function (request, config) {
-					var type, headers;
-	
-					headers = request.headers || (request.headers = {});
-					type = mime.parse(headers['Content-Type'] = headers['Content-Type'] || config.mime || 'text/plain');
-					headers.Accept = headers.Accept || config.accept || type.raw + ', application/json;q=0.8, text/plain;q=0.5, */*;q=0.2';
-	
-					if (!('entity' in request)) {
-						return request;
-					}
-	
-					return config.registry.lookup(type).otherwise(function () {
-						// failed to resolve converter
-						if (config.permissive) {
-							return noopConverter;
-						}
-						throw 'mime-unknown';
-					}).then(function (converter) {
-						var client = config.client || request.originator;
-	
-						return when.attempt(converter.write, request.entity, { client: client, request: request, mime: type, registry: config.registry })
-							.otherwise(function() {
-								throw 'mime-serialization';
-							})
-							.then(function(entity) {
-								request.entity = entity;
-								return request;
-							});
-					});
-				},
-				response: function (response, config) {
-					if (!(response.headers && response.headers['Content-Type'] && response.entity)) {
-						return response;
-					}
-	
-					var type = mime.parse(response.headers['Content-Type']);
-	
-					return config.registry.lookup(type).otherwise(function () { return noopConverter; }).then(function (converter) {
-						var client = config.client || response.request && response.request.originator;
-	
-						return when.attempt(converter.read, response.entity, { client: client, response: response, mime: type, registry: config.registry })
-							.otherwise(function (e) {
-								response.error = 'mime-deserialization';
-								response.cause = e;
-								throw response;
-							})
-							.then(function (entity) {
-								response.entity = entity;
-								return response;
-							});
-					});
-				}
-			});
-	
-		}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	
-	}(
-		__webpack_require__(188)
-		// Boilerplate for AMD and Node
-	));
-
-
-/***/ }),
-/* 216 */
-/***/ (function(module, exports, __webpack_require__) {
-
-	var __WEBPACK_AMD_DEFINE_RESULT__;/*
 	* Copyright 2014 the original author or authors
 	* @license MIT, see LICENSE.txt for details
 	*
@@ -26176,7 +26091,7 @@
 
 
 /***/ }),
-/* 217 */
+/* 216 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -26193,7 +26108,7 @@
 	
 			var mime, when, registry;
 	
-			mime = __webpack_require__(216);
+			mime = __webpack_require__(215);
 			when = __webpack_require__(184);
 	
 			function Registry(mimes) {
@@ -26278,11 +26193,11 @@
 			registry = new Registry({});
 	
 			// include provided serializers
-			registry.register('application/hal', __webpack_require__(218));
-			registry.register('application/json', __webpack_require__(225));
-			registry.register('application/x-www-form-urlencoded', __webpack_require__(226));
-			registry.register('multipart/form-data', __webpack_require__(227));
-			registry.register('text/plain', __webpack_require__(228));
+			registry.register('application/hal', __webpack_require__(217));
+			registry.register('application/json', __webpack_require__(224));
+			registry.register('application/x-www-form-urlencoded', __webpack_require__(225));
+			registry.register('multipart/form-data', __webpack_require__(226));
+			registry.register('text/plain', __webpack_require__(227));
 	
 			registry.register('+json', registry.delegate('application/json'));
 	
@@ -26297,7 +26212,7 @@
 
 
 /***/ }),
-/* 218 */
+/* 217 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -26314,10 +26229,10 @@
 	
 			var pathPrefix, template, find, lazyPromise, responsePromise, when;
 	
-			pathPrefix = __webpack_require__(219);
-			template = __webpack_require__(220);
-			find = __webpack_require__(223);
-			lazyPromise = __webpack_require__(224);
+			pathPrefix = __webpack_require__(218);
+			template = __webpack_require__(219);
+			find = __webpack_require__(222);
+			lazyPromise = __webpack_require__(223);
 			responsePromise = __webpack_require__(212);
 			when = __webpack_require__(184);
 	
@@ -26442,7 +26357,7 @@
 
 
 /***/ }),
-/* 219 */
+/* 218 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -26507,7 +26422,7 @@
 
 
 /***/ }),
-/* 220 */
+/* 219 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -26525,7 +26440,7 @@
 			var interceptor, uriTemplate, mixin;
 	
 			interceptor = __webpack_require__(214);
-			uriTemplate = __webpack_require__(221);
+			uriTemplate = __webpack_require__(220);
 			mixin = __webpack_require__(210);
 	
 			/**
@@ -26569,7 +26484,7 @@
 
 
 /***/ }),
-/* 221 */
+/* 220 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -26588,7 +26503,7 @@
 	
 			var uriEncoder, operations, prefixRE;
 	
-			uriEncoder = __webpack_require__(222);
+			uriEncoder = __webpack_require__(221);
 	
 			prefixRE = /^([^:]*):([0-9]+)$/;
 			operations = {
@@ -26747,7 +26662,7 @@
 
 
 /***/ }),
-/* 222 */
+/* 221 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -26933,7 +26848,7 @@
 
 
 /***/ }),
-/* 223 */
+/* 222 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -26980,7 +26895,7 @@
 
 
 /***/ }),
-/* 224 */
+/* 223 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -27041,7 +26956,7 @@
 
 
 /***/ }),
-/* 225 */
+/* 224 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -27094,7 +27009,7 @@
 
 
 /***/ }),
-/* 226 */
+/* 225 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -27190,7 +27105,7 @@
 
 
 /***/ }),
-/* 227 */
+/* 226 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -27269,7 +27184,7 @@
 
 
 /***/ }),
-/* 228 */
+/* 227 */
 /***/ (function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;/*
@@ -27302,6 +27217,39 @@
 		// Boilerplate for AMD and Node
 	));
 
+
+/***/ }),
+/* 228 */
+/***/ (function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_RESULT__;'use strict';
+	
+	!(__WEBPACK_AMD_DEFINE_RESULT__ = function () {
+	    // define 是 AMD（Asynchronous Module Definition，异步模块加载机制）的 API。
+	
+	    'use strict'; // use strict 是使用严格模式，不能使用未声明的变量。
+	
+	    /* Convert a single or array of resources into "URI1\nURI2\nURI3..." */
+	
+	    return {
+	        read: function read(str /*, opts */) {
+	            // 字符串到数组
+	            return str.split('\n');
+	        },
+	        write: function write(obj /*, opts */) {
+	            // 数组到字符串
+	            // If this is an Array, extract the self URI and then join using a newline
+	            if (obj instanceof Array) {
+	                return obj.map(function (resource) {
+	                    return resource._links.self.href;
+	                }).join('\n');
+	            } else {
+	                // otherwise, just return the self URI
+	                return obj._links.self.href;
+	            }
+	        }
+	    };
+	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),
 /* 229 */
@@ -27384,30 +27332,86 @@
 /* 231 */
 /***/ (function(module, exports, __webpack_require__) {
 
-	var __WEBPACK_AMD_DEFINE_RESULT__;'use strict';
+	var __WEBPACK_AMD_DEFINE_RESULT__;/*
+	 * Copyright 2013 the original author or authors
+	 * @license MIT, see LICENSE.txt for details
+	 *
+	 * @author Scott Andrews
+	 */
 	
-	!(__WEBPACK_AMD_DEFINE_RESULT__ = function () {
+	(function (define) {
 		'use strict';
 	
-		/* Convert a single or array of resources into "URI1\nURI2\nURI3..." */
+		!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
 	
-		return {
-			read: function read(str /*, opts */) {
-				return str.split('\n');
-			},
-			write: function write(obj /*, opts */) {
-				// If this is an Array, extract the self URI and then join using a newline
-				if (obj instanceof Array) {
-					return obj.map(function (resource) {
-						return resource._links.self.href;
-					}).join('\n');
-				} else {
-					// otherwise, just return the self URI
-					return obj._links.self.href;
+			var interceptor, mixinUtil, defaulter;
+	
+			interceptor = __webpack_require__(214);
+			mixinUtil = __webpack_require__(210);
+	
+			defaulter = (function () {
+	
+				function mixin(prop, target, defaults) {
+					if (prop in target || prop in defaults) {
+						target[prop] = mixinUtil({}, defaults[prop], target[prop]);
+					}
 				}
-			}
-		};
-	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	
+				function copy(prop, target, defaults) {
+					if (prop in defaults && !(prop in target)) {
+						target[prop] = defaults[prop];
+					}
+				}
+	
+				var mappings = {
+					method: copy,
+					path: copy,
+					params: mixin,
+					headers: mixin,
+					entity: copy,
+					mixin: mixin
+				};
+	
+				return function (target, defaults) {
+					for (var prop in mappings) {
+						/*jshint forin: false */
+						mappings[prop](prop, target, defaults);
+					}
+					return target;
+				};
+	
+			}());
+	
+			/**
+			 * Provide default values for a request. These values will be applied to the
+			 * request if the request object does not already contain an explicit value.
+			 *
+			 * For 'params', 'headers', and 'mixin', individual values are mixed in with the
+			 * request's values. The result is a new object representiing the combined
+			 * request and config values. Neither input object is mutated.
+			 *
+			 * @param {Client} [client] client to wrap
+			 * @param {string} [config.method] the default method
+			 * @param {string} [config.path] the default path
+			 * @param {Object} [config.params] the default params, mixed with the request's existing params
+			 * @param {Object} [config.headers] the default headers, mixed with the request's existing headers
+			 * @param {Object} [config.mixin] the default "mixins" (http/https options), mixed with the request's existing "mixins"
+			 *
+			 * @returns {Client}
+			 */
+			return interceptor({
+				request: function handleRequest(request, config) {
+					return defaulter(request, config);
+				}
+			});
+	
+		}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	
+	}(
+		__webpack_require__(188)
+		// Boilerplate for AMD and Node
+	));
+
 
 /***/ }),
 /* 232 */
