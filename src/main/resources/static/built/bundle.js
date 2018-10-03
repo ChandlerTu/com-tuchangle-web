@@ -27258,21 +27258,22 @@
 	var __WEBPACK_AMD_DEFINE_RESULT__;'use strict';
 	
 	!(__WEBPACK_AMD_DEFINE_RESULT__ = function (require) {
-		'use strict';
 	
-		var interceptor = __webpack_require__(214);
+	    'use strict';
 	
-		return interceptor({
-			request: function request(_request /*, config, meta */) {
-				/* If the URI is a URI Template per RFC 6570 (http://tools.ietf.org/html/rfc6570), trim out the template part */
-				if (_request.path.indexOf('{') === -1) {
-					return _request;
-				} else {
-					_request.path = _request.path.split('{')[0];
-					return _request;
-				}
-			}
-		});
+	    var interceptor = __webpack_require__(214);
+	
+	    return interceptor({
+	        request: function request(_request /*, config, meta */) {
+	            /* If the URI is a URI Template per RFC 6570 (http://tools.ietf.org/html/rfc6570), trim out the template part */
+	            if (_request.path.indexOf('{') === -1) {
+	                return _request;
+	            } else {
+	                _request.path = _request.path.split('{')[0];
+	                return _request;
+	            }
+	        }
+	    });
 	}.call(exports, __webpack_require__, exports, module), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 
 /***/ }),

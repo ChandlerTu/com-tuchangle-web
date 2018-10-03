@@ -18,4 +18,5 @@ define( function() { // define 是 AMD（Asynchronous Module Definition，异步
             }
         }
     };
+
 } );
