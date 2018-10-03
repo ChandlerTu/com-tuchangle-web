@@ -149,11 +149,8 @@ class DietaryList extends React.Component {
 
     render() {
         var dietaries = this.props.dietaries.map( dietary =>
-            <Dietary key={dietary.entity._links.self.href}
-                dietary={dietary}
-                attributes={this.props.attributes}
-                onUpdate={this.props.onUpdate}
-                onDelete={this.props.onDelete} />
+            <Dietary dietary={dietary} attributes={this.props.attributes}
+                onUpdate={this.props.onUpdate} onDelete={this.props.onDelete} />
         );
 
         return (
@@ -226,8 +223,6 @@ class App extends React.Component {
                 entity: newDietary,
                 headers: { 'Content-Type': 'application/json' }
             } )
-        } ).then( response => {
-            return follow( client, root, ['dietaries'] );
         } ).done( response => {
             this.loadFromServer();
         } );
@@ -247,7 +242,10 @@ class App extends React.Component {
     }
 
     onDelete( dietary ) {
-        client( { method: 'DELETE', path: dietary.entity._links.self.href } ).done( response => {
+        client( {
+            method: 'DELETE',
+            path: dietary.entity._links.self.href
+        } ).done( response => {
             this.loadFromServer();
         } );
     }
@@ -256,14 +254,8 @@ class App extends React.Component {
         return (
             <div>
                 <CreateDialog attributes={this.state.attributes} onCreate={this.onCreate} />
-                <DietaryList page={this.state.page}
-                    dietaries={this.state.dietaries}
-                    links={this.state.links}
-                    attributes={this.state.attributes}
-                    onNavigate={this.onNavigate}
-                    onUpdate={this.onUpdate}
-                    onDelete={this.onDelete}
-                    updatePageSize={this.updatePageSize} />
+                <DietaryList dietaries={this.state.dietaries} attributes={this.state.attributes}
+                    onUpdate={this.onUpdate} onDelete={this.onDelete} />
             </div>
         );
     }

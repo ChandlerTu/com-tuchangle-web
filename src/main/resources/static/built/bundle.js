@@ -308,11 +308,8 @@
 	            var _this8 = this;
 	
 	            var dietaries = this.props.dietaries.map(function (dietary) {
-	                return React.createElement(Dietary, { key: dietary.entity._links.self.href,
-	                    dietary: dietary,
-	                    attributes: _this8.props.attributes,
-	                    onUpdate: _this8.props.onUpdate,
-	                    onDelete: _this8.props.onDelete });
+	                return React.createElement(Dietary, { dietary: dietary, attributes: _this8.props.attributes,
+	                    onUpdate: _this8.props.onUpdate, onDelete: _this8.props.onDelete });
 	            });
 	
 	            return React.createElement(
@@ -420,8 +417,6 @@
 	                    entity: newDietary,
 	                    headers: { 'Content-Type': 'application/json' }
 	                });
-	            }).then(function (response) {
-	                return follow(client, root, ['dietaries']);
 	            }).done(function (response) {
 	                _this11.loadFromServer();
 	            });
@@ -447,7 +442,10 @@
 	        value: function onDelete(dietary) {
 	            var _this13 = this;
 	
-	            client({ method: 'DELETE', path: dietary.entity._links.self.href }).done(function (response) {
+	            client({
+	                method: 'DELETE',
+	                path: dietary.entity._links.self.href
+	            }).done(function (response) {
 	                _this13.loadFromServer();
 	            });
 	        }
@@ -458,14 +456,8 @@
 	                'div',
 	                null,
 	                React.createElement(CreateDialog, { attributes: this.state.attributes, onCreate: this.onCreate }),
-	                React.createElement(DietaryList, { page: this.state.page,
-	                    dietaries: this.state.dietaries,
-	                    links: this.state.links,
-	                    attributes: this.state.attributes,
-	                    onNavigate: this.onNavigate,
-	                    onUpdate: this.onUpdate,
-	                    onDelete: this.onDelete,
-	                    updatePageSize: this.updatePageSize })
+	                React.createElement(DietaryList, { dietaries: this.state.dietaries, attributes: this.state.attributes,
+	                    onUpdate: this.onUpdate, onDelete: this.onDelete })
 	            );
 	        }
 	    }]);
