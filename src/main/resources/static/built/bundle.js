@@ -455,9 +455,9 @@
 	            return React.createElement(
 	                'div',
 	                null,
-	                React.createElement(CreateDialog, { attributes: this.state.attributes, onCreate: this.onCreate }),
-	                React.createElement(DietaryList, { dietaries: this.state.dietaries, attributes: this.state.attributes,
-	                    onUpdate: this.onUpdate, onDelete: this.onDelete })
+	                React.createElement(CreateDialog, { onCreate: this.onCreate, attributes: this.state.attributes }),
+	                React.createElement(DietaryList, { dietaries: this.state.dietaries, onUpdate: this.onUpdate,
+	                    attributes: this.state.attributes, onDelete: this.onDelete })
 	            );
 	        }
 	    }]);

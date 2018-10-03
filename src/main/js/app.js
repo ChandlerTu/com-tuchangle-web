@@ -253,9 +253,9 @@ class App extends React.Component {
     render() {
         return (
             <div>
-                <CreateDialog attributes={this.state.attributes} onCreate={this.onCreate} />
-                <DietaryList dietaries={this.state.dietaries} attributes={this.state.attributes}
-                    onUpdate={this.onUpdate} onDelete={this.onDelete} />
+                <CreateDialog onCreate={this.onCreate} attributes={this.state.attributes} />
+                <DietaryList dietaries={this.state.dietaries} onUpdate={this.onUpdate}
+                    attributes={this.state.attributes} onDelete={this.onDelete} />
             </div>
         );
     }
