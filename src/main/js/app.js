@@ -188,7 +188,7 @@ class App extends React.Component {
     }
 
     loadFromServer() {
-        follow( client, root, 'dietaries' ).then( dietaryCollection => {
+        follow( client, root, ['dietaries'] ).then( dietaryCollection => {
             return client( {
                 method: 'GET',
                 path: dietaryCollection.entity._links.profile.href,
@@ -213,7 +213,6 @@ class App extends React.Component {
                 page: this.page,
                 dietaries: dietaries,
                 attributes: Object.keys( this.schema.properties ),
-                pageSize: pageSize,
                 links: this.links
             } );
         } );
@@ -228,8 +227,7 @@ class App extends React.Component {
                 headers: { 'Content-Type': 'application/json' }
             } )
         } ).then( response => {
-            return follow( client, root, [
-                { rel: 'dietaries', params: { 'size': this.state.pageSize } }] );
+            return follow( client, root, ['dietaries'] );
         } ).done( response => {
             this.loadFromServer();
         } );
@@ -261,7 +259,6 @@ class App extends React.Component {
                 <DietaryList page={this.state.page}
                     dietaries={this.state.dietaries}
                     links={this.state.links}
-                    pageSize={this.state.pageSize}
                     attributes={this.state.attributes}
                     onNavigate={this.onNavigate}
                     onUpdate={this.onUpdate}

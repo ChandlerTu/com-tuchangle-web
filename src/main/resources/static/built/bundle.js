@@ -379,7 +379,7 @@
 	        value: function loadFromServer() {
 	            var _this10 = this;
 	
-	            follow(client, root, 'dietaries').then(function (dietaryCollection) {
+	            follow(client, root, ['dietaries']).then(function (dietaryCollection) {
 	                return client({
 	                    method: 'GET',
 	                    path: dietaryCollection.entity._links.profile.href,
@@ -404,7 +404,6 @@
 	                    page: _this10.page,
 	                    dietaries: dietaries,
 	                    attributes: Object.keys(_this10.schema.properties),
-	                    pageSize: pageSize,
 	                    links: _this10.links
 	                });
 	            });
@@ -422,7 +421,7 @@
 	                    headers: { 'Content-Type': 'application/json' }
 	                });
 	            }).then(function (response) {
-	                return follow(client, root, [{ rel: 'dietaries', params: { 'size': _this11.state.pageSize } }]);
+	                return follow(client, root, ['dietaries']);
 	            }).done(function (response) {
 	                _this11.loadFromServer();
 	            });
@@ -462,7 +461,6 @@
 	                React.createElement(DietaryList, { page: this.state.page,
 	                    dietaries: this.state.dietaries,
 	                    links: this.state.links,
-	                    pageSize: this.state.pageSize,
 	                    attributes: this.state.attributes,
 	                    onNavigate: this.onNavigate,
 	                    onUpdate: this.onUpdate,
