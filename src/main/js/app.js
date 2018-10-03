@@ -177,20 +177,18 @@ class App extends React.Component {
 
     constructor( props ) {
         super( props );
-        this.state = { dietaries: [], attributes: [], page: 1, pageSize: 20, links: {} };
+        this.state = { dietaries: [], attributes: [], page: 1, links: {} };
         this.onCreate = this.onCreate.bind( this );
         this.onUpdate = this.onUpdate.bind( this );
         this.onDelete = this.onDelete.bind( this );
     }
 
     componentDidMount() {
-        this.loadFromServer( this.state.pageSize );
+        this.loadFromServer();
     }
 
-    loadFromServer( pageSize ) {
-        follow( client, root, [
-            { rel: 'dietaries', params: { size: pageSize } }]
-        ).then( dietaryCollection => {
+    loadFromServer() {
+        follow( client, root, 'dietaries' ).then( dietaryCollection => {
             return client( {
                 method: 'GET',
                 path: dietaryCollection.entity._links.profile.href,
@@ -233,7 +231,7 @@ class App extends React.Component {
             return follow( client, root, [
                 { rel: 'dietaries', params: { 'size': this.state.pageSize } }] );
         } ).done( response => {
-            this.loadFromServer( this.state.pageSize );
+            this.loadFromServer();
         } );
     }
 
@@ -246,13 +244,13 @@ class App extends React.Component {
                 'Content-Type': 'application/json'
             }
         } ).done( response => {
-            this.loadFromServer( this.state.pageSize );
+            this.loadFromServer();
         } );
     }
 
     onDelete( dietary ) {
         client( { method: 'DELETE', path: dietary.entity._links.self.href } ).done( response => {
-            this.loadFromServer( this.state.pageSize );
+            this.loadFromServer();
         } );
     }
 

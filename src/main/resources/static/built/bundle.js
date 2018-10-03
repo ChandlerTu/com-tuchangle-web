@@ -362,7 +362,7 @@
 	
 	        var _this9 = _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this, props));
 	
-	        _this9.state = { dietaries: [], attributes: [], page: 1, pageSize: 20, links: {} };
+	        _this9.state = { dietaries: [], attributes: [], page: 1, links: {} };
 	        _this9.onCreate = _this9.onCreate.bind(_this9);
 	        _this9.onUpdate = _this9.onUpdate.bind(_this9);
 	        _this9.onDelete = _this9.onDelete.bind(_this9);
@@ -372,14 +372,14 @@
 	    _createClass(App, [{
 	        key: 'componentDidMount',
 	        value: function componentDidMount() {
-	            this.loadFromServer(this.state.pageSize);
+	            this.loadFromServer();
 	        }
 	    }, {
 	        key: 'loadFromServer',
-	        value: function loadFromServer(pageSize) {
+	        value: function loadFromServer() {
 	            var _this10 = this;
 	
-	            follow(client, root, [{ rel: 'dietaries', params: { size: pageSize } }]).then(function (dietaryCollection) {
+	            follow(client, root, 'dietaries').then(function (dietaryCollection) {
 	                return client({
 	                    method: 'GET',
 	                    path: dietaryCollection.entity._links.profile.href,
@@ -424,7 +424,7 @@
 	            }).then(function (response) {
 	                return follow(client, root, [{ rel: 'dietaries', params: { 'size': _this11.state.pageSize } }]);
 	            }).done(function (response) {
-	                _this11.loadFromServer(_this11.state.pageSize);
+	                _this11.loadFromServer();
 	            });
 	        }
 	    }, {
@@ -440,7 +440,7 @@
 	                    'Content-Type': 'application/json'
 	                }
 	            }).done(function (response) {
-	                _this12.loadFromServer(_this12.state.pageSize);
+	                _this12.loadFromServer();
 	            });
 	        }
 	    }, {
@@ -449,7 +449,7 @@
 	            var _this13 = this;
 	
 	            client({ method: 'DELETE', path: dietary.entity._links.self.href }).done(function (response) {
-	                _this13.loadFromServer(_this13.state.pageSize);
+	                _this13.loadFromServer();
 	            });
 	        }
 	    }, {
@@ -27421,44 +27421,45 @@
 	'use strict';
 	
 	module.exports = function follow(api, rootPath, relArray) {
-		var root = api({
-			method: 'GET',
-			path: rootPath
-		});
 	
-		return relArray.reduce(function (root, arrayItem) {
-			var rel = typeof arrayItem === 'string' ? arrayItem : arrayItem.rel;
-			return traverseNext(root, rel, arrayItem);
-		}, root);
+	    var root = api({
+	        method: 'GET',
+	        path: rootPath
+	    });
 	
-		function traverseNext(root, rel, arrayItem) {
-			return root.then(function (response) {
-				if (hasEmbeddedRel(response.entity, rel)) {
-					return response.entity._embedded[rel];
-				}
+	    return relArray.reduce(function (root, arrayItem) {
+	        var rel = typeof arrayItem === 'string' ? arrayItem : arrayItem.rel;
+	        return traverseNext(root, rel, arrayItem);
+	    }, root);
 	
-				if (!response.entity._links) {
-					return [];
-				}
+	    function traverseNext(root, rel, arrayItem) {
+	        return root.then(function (response) {
+	            if (hasEmbeddedRel(response.entity, rel)) {
+	                return response.entity._embedded[rel];
+	            }
 	
-				if (typeof arrayItem === 'string') {
-					return api({
-						method: 'GET',
-						path: response.entity._links[rel].href
-					});
-				} else {
-					return api({
-						method: 'GET',
-						path: response.entity._links[rel].href,
-						params: arrayItem.params
-					});
-				}
-			});
-		}
+	            if (!response.entity._links) {
+	                return [];
+	            }
 	
-		function hasEmbeddedRel(entity, rel) {
-			return entity._embedded && entity._embedded.hasOwnProperty(rel);
-		}
+	            if (typeof arrayItem === 'string') {
+	                return api({
+	                    method: 'GET',
+	                    path: response.entity._links[rel].href
+	                });
+	            } else {
+	                return api({
+	                    method: 'GET',
+	                    path: response.entity._links[rel].href,
+	                    params: arrayItem.params
+	                });
+	            }
+	        });
+	    }
+	
+	    function hasEmbeddedRel(entity, rel) {
+	        return entity._embedded && entity._embedded.hasOwnProperty(rel);
+	    }
 	};
 
 /***/ })
