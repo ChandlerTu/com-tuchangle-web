@@ -359,7 +359,7 @@
 	
 	        var _this9 = _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this, props));
 	
-	        _this9.state = { dietaries: [], attributes: [], page: 1, links: {} };
+	        _this9.state = { dietaries: [], attributes: [], page: 1 };
 	        _this9.onCreate = _this9.onCreate.bind(_this9);
 	        _this9.onUpdate = _this9.onUpdate.bind(_this9);
 	        _this9.onDelete = _this9.onDelete.bind(_this9);
@@ -383,7 +383,6 @@
 	                    headers: { 'Accept': 'application/schema+json' }
 	                }).then(function (schema) {
 	                    _this10.schema = schema.entity;
-	                    _this10.links = dietaryCollection.entity._links;
 	                    return dietaryCollection;
 	                });
 	            }).then(function (dietaryCollection) {
@@ -400,8 +399,7 @@
 	                _this10.setState({
 	                    page: _this10.page,
 	                    dietaries: dietaries,
-	                    attributes: Object.keys(_this10.schema.properties),
-	                    links: _this10.links
+	                    attributes: Object.keys(_this10.schema.properties)
 	                });
 	            });
 	        }

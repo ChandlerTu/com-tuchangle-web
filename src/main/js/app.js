@@ -174,7 +174,7 @@ class App extends React.Component {
 
     constructor( props ) {
         super( props );
-        this.state = { dietaries: [], attributes: [], page: 1, links: {} };
+        this.state = { dietaries: [], attributes: [], page: 1};
         this.onCreate = this.onCreate.bind( this );
         this.onUpdate = this.onUpdate.bind( this );
         this.onDelete = this.onDelete.bind( this );
@@ -192,7 +192,6 @@ class App extends React.Component {
                 headers: { 'Accept': 'application/schema+json' }
             } ).then( schema => {
                 this.schema = schema.entity;
-                this.links = dietaryCollection.entity._links;
                 return dietaryCollection;
             } );
         } ).then( dietaryCollection => {
@@ -210,7 +209,6 @@ class App extends React.Component {
                 page: this.page,
                 dietaries: dietaries,
                 attributes: Object.keys( this.schema.properties ),
-                links: this.links
             } );
         } );
     }
