@@ -359,7 +359,7 @@
 	
 	        var _this9 = _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this, props));
 	
-	        _this9.state = { dietaries: [], attributes: [], page: 1 };
+	        _this9.state = { dietaries: [], attributes: [] };
 	        _this9.onCreate = _this9.onCreate.bind(_this9);
 	        _this9.onUpdate = _this9.onUpdate.bind(_this9);
 	        _this9.onDelete = _this9.onDelete.bind(_this9);
@@ -386,7 +386,6 @@
 	                    return dietaryCollection;
 	                });
 	            }).then(function (dietaryCollection) {
-	                _this10.page = dietaryCollection.entity.page;
 	                return dietaryCollection.entity._embedded.dietaries.map(function (dietary) {
 	                    return client({
 	                        method: 'GET',
@@ -397,7 +396,6 @@
 	                return when.all(dietaryPromises);
 	            }).done(function (dietaries) {
 	                _this10.setState({
-	                    page: _this10.page,
 	                    dietaries: dietaries,
 	                    attributes: Object.keys(_this10.schema.properties)
 	                });

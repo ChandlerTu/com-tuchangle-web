@@ -174,7 +174,7 @@ class App extends React.Component {
 
     constructor( props ) {
         super( props );
-        this.state = { dietaries: [], attributes: [], page: 1};
+        this.state = { dietaries: [], attributes: []};
         this.onCreate = this.onCreate.bind( this );
         this.onUpdate = this.onUpdate.bind( this );
         this.onDelete = this.onDelete.bind( this );
@@ -195,7 +195,6 @@ class App extends React.Component {
                 return dietaryCollection;
             } );
         } ).then( dietaryCollection => {
-            this.page = dietaryCollection.entity.page;
             return dietaryCollection.entity._embedded.dietaries.map( dietary =>
                 client( {
                     method: 'GET',
@@ -206,7 +205,6 @@ class App extends React.Component {
             return when.all( dietaryPromises );
         } ).done( dietaries => {
             this.setState( {
-                page: this.page,
                 dietaries: dietaries,
                 attributes: Object.keys( this.schema.properties ),
             } );
