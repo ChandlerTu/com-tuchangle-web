@@ -99,14 +99,6 @@
 	    }, {
 	        key: 'render',
 	        value: function render() {
-	            var inputs = this.props.attributes.map(function (attribute) {
-	                return React.createElement(
-	                    'p',
-	                    { key: attribute },
-	                    React.createElement('input', { type: 'text', placeholder: attribute, ref: attribute, className: 'field' })
-	                );
-	            });
-	
 	            return React.createElement(
 	                'div',
 	                null,
@@ -134,7 +126,21 @@
 	                        React.createElement(
 	                            'form',
 	                            null,
-	                            inputs,
+	                            React.createElement(
+	                                'p',
+	                                { key: 'food' },
+	                                React.createElement('input', { type: 'text', placeholder: 'food', ref: 'food', className: 'field' })
+	                            ),
+	                            React.createElement(
+	                                'p',
+	                                { key: 'gram' },
+	                                React.createElement('input', { type: 'text', placeholder: 'gram', ref: 'gram', className: 'field' })
+	                            ),
+	                            React.createElement(
+	                                'p',
+	                                { key: 'insertTime' },
+	                                React.createElement('input', { type: 'text', placeholder: 'insertTime', ref: 'insertTime', className: 'field' })
+	                            ),
 	                            React.createElement(
 	                                'button',
 	                                { onClick: this.handleSubmit },
@@ -308,7 +314,7 @@
 	            var _this8 = this;
 	
 	            var dietaries = this.props.dietaries.map(function (dietary) {
-	                return React.createElement(Dietary, { dietary: dietary, attributes: _this8.props.attributes,
+	                return React.createElement(Dietary, { key: dietary.entity._links.self.href, dietary: dietary, attributes: _this8.props.attributes,
 	                    onUpdate: _this8.props.onUpdate, onDelete: _this8.props.onDelete });
 	            });
 	

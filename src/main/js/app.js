@@ -35,12 +35,6 @@ class CreateDialog extends React.Component {
     }
 
     render() {
-        var inputs = this.props.attributes.map( attribute =>
-            <p key={attribute}>
-                <input type="text" placeholder={attribute} ref={attribute} className="field" />
-            </p>
-        );
-
         return (
             <div>
                 <a href="#createDietary">Create</a>
@@ -52,7 +46,15 @@ class CreateDialog extends React.Component {
                         <h2>Create new dietary</h2>
 
                         <form>
-                            {inputs}
+                            <p key="food">
+                                <input type="text" placeholder="food" ref="food" className="field" />
+                            </p>
+                            <p key="gram">
+                                <input type="text" placeholder="gram" ref="gram" className="field" />
+                            </p>
+                            <p key="insertTime">
+                                <input type="text" placeholder="insertTime" ref="insertTime" className="field" />
+                            </p>
                             <button onClick={this.handleSubmit}>Create</button>
                         </form>
                     </div>
@@ -149,7 +151,7 @@ class DietaryList extends React.Component {
 
     render() {
         var dietaries = this.props.dietaries.map( dietary =>
-            <Dietary dietary={dietary} attributes={this.props.attributes}
+            <Dietary key={dietary.entity._links.self.href} dietary={dietary} attributes={this.props.attributes}
                 onUpdate={this.props.onUpdate} onDelete={this.props.onDelete} />
         );
 
