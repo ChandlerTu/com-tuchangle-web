@@ -1,7 +1,7 @@
 package com.tuchangle.web;
 
-import org.springframework.data.repository.PagingAndSortingRepository;
+import org.springframework.data.repository.CrudRepository;
 
-public interface DietaryRepository extends PagingAndSortingRepository<Dietary, Integer> {
+public interface DietaryRepository extends CrudRepository<Dietary, Integer> {
 
 }
