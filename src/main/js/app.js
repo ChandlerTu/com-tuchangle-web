@@ -1,13 +1,16 @@
 'use strict';
 
-const React = require( 'react' );
-const ReactDOM = require( 'react-dom' );
-const when = require( 'when' );
-
 const client = require( './client' );
 const follow = require( './follow' );
-
+const intl = require( 'react-intl-universal' );
+const locales = {
+    "en-US": require( './locales/en-US.js' ),
+    "zh-CN": require( './locales/zh-CN.js' ),
+};
+const React = require( 'react' );
+const ReactDOM = require( 'react-dom' );
 const root = '/api';
+const when = require( 'when' );
 
 class CreateDialog extends React.Component {
 
@@ -47,15 +50,15 @@ class CreateDialog extends React.Component {
 
                         <form>
                             <p key="food">
-                                <input type="text" placeholder="food" ref="food" className="field" />
+                                <input type="text" placeholder={intl.get( 'food' )} ref="food" className="field" />
                             </p>
                             <p key="gram">
-                                <input type="text" placeholder="gram" ref="gram" className="field" />
+                                <input type="text" placeholder={intl.get( 'gram' )} ref="gram" className="field" />
                             </p>
                             <p key="insertTime">
-                                <input type="text" placeholder="insertTime" ref="insertTime" className="field" />
+                                <input type="text" placeholder={intl.get( 'insertTime' )} ref="insertTime" className="field" />
                             </p>
-                            <button onClick={this.handleSubmit}>Create</button>
+                            <button onClick={this.handleSubmit}>{intl.get( 'create' )}</button>
                         </form>
                     </div>
                 </div>
@@ -176,13 +179,28 @@ class App extends React.Component {
 
     constructor( props ) {
         super( props );
-        this.state = { dietaries: [], attributes: [] };
+        this.state = { dietaries: [], attributes: [], initDone: false };
         this.onCreate = this.onCreate.bind( this );
         this.onUpdate = this.onUpdate.bind( this );
         this.onDelete = this.onDelete.bind( this );
     }
 
+    loadLocales() {
+        // init method will load CLDR locale data according to currentLocale
+        // react-intl-universal is singleton, so you should init it only once in
+        // your app
+        intl.init( {
+            currentLocale: 'zh-CN', // TODO: determine locale here
+            locales,
+        } )
+            .then(() => {
+                // After loading CLDR locale data, start to render
+                this.setState( { initDone: true } );
+            } );
+    }
+
     componentDidMount() {
+        this.loadLocales();
         this.loadFromServer();
     }
 
@@ -250,6 +268,7 @@ class App extends React.Component {
 
     render() {
         return (
+            this.state.initDone &&
             <div>
                 <CreateDialog onCreate={this.onCreate} attributes={this.state.attributes} />
                 <DietaryList dietaries={this.state.dietaries} onUpdate={this.onUpdate}
