@@ -5854,8 +5854,10 @@
 	      urlLocaleKey: null, // URL's query Key to determine locale. Example: if URL=http://localhost?lang=en-US, then set it 'lang'
 	      cookieLocaleKey: null, // Cookie's Key to determine locale. Example: if cookie=lang:en-US, then set it 'lang'
 	      locales: {}, // app locale data like {"en-US":{"key1":"value1"},"zh-CN":{"key1":"值1"}}
-	      warningHandler: console.warn, // ability to accumulate missing messages using third party services like Sentry
-	      commonLocaleDataUrls: COMMON_LOCALE_DATA_URLS
+	      warningHandler: console.warn.bind(console), // ability to accumulate missing messages using third party services like Sentry
+	      escapeHtml: true, // disable escape html in variable mode
+	      commonLocaleDataUrls: COMMON_LOCALE_DATA_URLS,
+	      fallbackLocale: null // Locale to use if a key is not found in the current locale
 	    };
 	  }
 	
@@ -5883,15 +5885,23 @@
 	      }
 	      var msg = this.getDescendantProp(locales[currentLocale], key);
 	      if (msg == null) {
-	        this.options.warningHandler("react-intl-universal key \"" + key + "\" not defined in " + currentLocale);
-	        return "";
+	        if (this.options.fallbackLocale) {
+	          msg = this.getDescendantProp(locales[this.options.fallbackLocale], key);
+	          if (msg == null) {
+	            this.options.warningHandler("react-intl-universal key \"" + key + "\" not defined in " + currentLocale + " or the fallback locale, " + this.options.fallbackLocale);
+	            return "";
+	          }
+	        } else {
+	          this.options.warningHandler("react-intl-universal key \"" + key + "\" not defined in " + currentLocale);
+	          return "";
+	        }
 	      }
 	      if (variables) {
 	        variables = Object.assign({}, variables);
 	        // HTML message with variables. Escape it to avoid XSS attack.
 	        for (var i in variables) {
 	          var value = variables[i];
-	          if ((typeof value === "string" || value instanceof String) && value.indexOf("<") >= 0 && value.indexOf(">") >= 0) {
+	          if (this.options.escapeHtml === true && (typeof value === "string" || value instanceof String) && value.indexOf("<") >= 0 && value.indexOf(">") >= 0) {
 	            value = escapeHtml(value);
 	          }
 	          variables[i] = value;
